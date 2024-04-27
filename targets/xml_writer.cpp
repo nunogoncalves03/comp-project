@@ -238,3 +238,7 @@ void til::xml_writer::do_address_of_node(til::address_of_node * const node, int 
 void til::xml_writer::do_sizeof_node(til::sizeof_node * const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::xml_writer::do_pointer_index_node(til::pointer_index_node * const node, int lvl) {
+  // FIXME: EMPTY
+}
