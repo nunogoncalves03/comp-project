@@ -210,3 +210,7 @@ void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
 void til::xml_writer::do_declaration_node(til::declaration_node * const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::xml_writer::do_block_node(til::block_node * const node, int lvl) {
+  // FIXME: EMPTY
+}
