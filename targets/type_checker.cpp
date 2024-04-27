@@ -224,3 +224,7 @@ void til::type_checker::do_null_pointer_node(til::null_pointer_node *const node,
 void til::type_checker::do_address_of_node(til::address_of_node *const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  // FIXME: EMPTY
+}
