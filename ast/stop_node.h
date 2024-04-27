@@ -6,7 +6,7 @@
 namespace til {
 
   /**
-   * Class for describing stoo nodes.
+   * Class for describing stop nodes.
    */
   class stop_node : public cdk::basic_node {
     int _level;

@@ -208,3 +208,7 @@ void til::type_checker::do_block_node(til::block_node *const node, int lvl) {
 void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::type_checker::do_next_node(til::next_node *const node, int lvl) {
+  // FIXME: EMPTY
+}
