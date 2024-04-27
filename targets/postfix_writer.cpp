@@ -303,3 +303,7 @@ void til::postfix_writer::do_return_node(til::return_node * const node, int lvl)
 void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::postfix_writer::do_address_of_node(til::address_of_node * const node, int lvl) {
+  // FIXME: EMPTY
+}
