@@ -226,3 +226,7 @@ void til::xml_writer::do_next_node(til::next_node * const node, int lvl) {
 void til::xml_writer::do_return_node(til::return_node * const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::xml_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
+  // FIXME: EMPTY
+}
