@@ -34,7 +34,7 @@
 
 %token <i> tINTEGER
 %token <s> tIDENTIFIER tSTRING
-%token tWHILE tIF tPRINT tPRINTLN tREAD tBEGIN tEND
+%token tLOOP tIF tPRINT tPRINTLN tREAD tBEGIN tEND
 
 %nonassoc tIFX
 %nonassoc tELSE
@@ -66,7 +66,7 @@ stmt : expr ';'                         { $$ = new til::evaluation_node(LINE, $1
      | tPRINT exprs ';'                 { $$ = new til::print_node(LINE, $2, false); }
      | tPRINTLN exprs ';'               { $$ = new til::print_node(LINE, $2, true); }
      | tREAD lval ';'                   { $$ = new til::read_node(LINE, $2); }
-     | tWHILE '(' expr ')' stmt         { $$ = new til::while_node(LINE, $3, $5); }
+     | tLOOP '(' expr ')' stmt         { $$ = new til::loop_node(LINE, $3, $5); }
      | tIF '(' expr ')' stmt %prec tIFX { $$ = new til::if_node(LINE, $3, $5); }
      | tIF '(' expr ')' stmt tELSE stmt { $$ = new til::if_else_node(LINE, $3, $5, $7); }
      | '{' list '}'                     { $$ = $2; }
