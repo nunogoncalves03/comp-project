@@ -26,6 +26,7 @@
 "if"                   return tIF; 
 "else"                 return tELSE; 
 "print"                return tPRINT; 
+"println"              return tPRINTLN; 
 "read"                 return tREAD; 
 "begin"                return tBEGIN; 
 "end"                  return tEND; 
@@ -40,7 +41,7 @@
 
 [0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER;
 
-[-()<>=+*/%;{}.]       return *yytext;
+[-()<>=+*/%;{}.]       return *yytext; /* FIXME: add " " separator (exprs, print x y)? */
 
 [ \t\n]+               ; /* ignore whitespace */
 
