@@ -315,3 +315,7 @@ void til::postfix_writer::do_sizeof_node(til::sizeof_node * const node, int lvl)
 void til::postfix_writer::do_pointer_index_node(til::pointer_index_node * const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::postfix_writer::do_function_call_node(til::function_call_node * const node, int lvl) {
+  // FIXME: EMPTY
+}

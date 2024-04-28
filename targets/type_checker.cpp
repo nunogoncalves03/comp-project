@@ -232,3 +232,7 @@ void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
 void til::type_checker::do_pointer_index_node(til::pointer_index_node *const node, int lvl) {
   // FIXME: EMPTY
 }
+
+void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {
+  // FIXME: EMPTY
+}
