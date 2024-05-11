@@ -25,6 +25,7 @@
   //-- don't change *any* of these --- END!
 
   int                   i;          /* integer value */
+  double                d;          /* double value */
   std::string          *s;          /* symbol name or string literal */
   cdk::basic_node      *node;       /* node pointer */
   cdk::sequence_node   *sequence;
@@ -32,18 +33,21 @@
   cdk::lvalue_node     *lvalue;
 };
 
-%token <i> tINTEGER
-%token <s> tIDENTIFIER tSTRING
-%token tLOOP tIF tPRINT tPRINTLN tREAD tBEGIN tEND
 
+%token <i> tINTEGER
+%token <d> tDOUBLE
+%token <s> tIDENTIFIER tSTRING
+%token tGE tLE tEQ tNE tAND tOR
+%token tTYPE_INT tTYPE_DOUBLE tTYPE_STRING tTYPE_VOID
+%token tEXTERNAL tFORWARD tPUBLIC tVAR
+%token tBLOCK tIF tLOOP tSTOP tNEXT tRETURN tPRINT tPRINTLN
+%token tREAD tNULL tSET tINDEX tOBJECTS tSIZEOF tFUNCTION
+%token tPROGRAM
+
+/* TO BE REMOVED */
+%token tLOOP tIF tPRINT tPRINTLN tREAD tBEGIN tEND
 %nonassoc tIFX
 %nonassoc tELSE
-
-%right '='
-%left tGE tLE tEQ tNE '>' '<'
-%left '+' '-'
-%left '*' '/' '%'
-%nonassoc tUNARY
 
 %type <node> stmt program
 %type <sequence> list exprs
