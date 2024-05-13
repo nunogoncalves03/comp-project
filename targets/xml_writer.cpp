@@ -262,12 +262,9 @@ void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
 
 void til::xml_writer::do_declaration_node(til::declaration_node * const node, int lvl) {
   os() << std::string(lvl, ' ') << "<" << node->label() << " qualifier='" <<
-  qualifier_name(node->qualifier()) << "' identifier='" << node->identifier();
-  
-  if (node->type() != nullptr) {
-    os() << "' type='" << cdk::to_string(node->type());
-  }
-  os() <<  "'>" << std::endl;
+  qualifier_name(node->qualifier()) << "' identifier='" << node->identifier() <<
+  "' type='" << (node->type() != nullptr ? cdk::to_string(node->type()) : "inferred") <<
+  "'>" << std::endl;
   
   if (node->initializer() == nullptr) {
     os() << std::string(lvl + 2, ' ') + "<initializer />" << std::endl;
