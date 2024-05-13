@@ -3,6 +3,9 @@
 
 #include "targets/basic_ast_visitor.h"
 #include <cdk/ast/basic_node.h>
+#include <cdk/types/types.h>
+
+#include "til_parser.tab.h"
 
 namespace til {
 
@@ -43,7 +46,14 @@ namespace til {
     void process_literal(cdk::literal_node<T> *const node, int lvl) {
       os() << std::string(lvl, ' ') << "<" << node->label() << ">" << node->value() << "</" << node->label() << ">" << std::endl;
     }
-
+    std::string qualifier_name(int qualifier) {
+      if (qualifier == tPUBLIC) return "public";
+      if (qualifier == tEXTERNAL) return "external";
+      if (qualifier == tFORWARD) return "forward";
+      if (qualifier == tPRIVATE) return "private";
+      else
+        return "unknown qualifier";
+    }
   public:
     // do not edit these lines
 #define __IN_VISITOR_HEADER__
