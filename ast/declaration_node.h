@@ -3,6 +3,7 @@
 
 #include <cdk/ast/typed_node.h>
 #include <cdk/ast/expression_node.h>
+#include <cdk/types/basic_type.h>
 
 namespace til {
 
@@ -15,8 +16,10 @@ namespace til {
     cdk::expression_node *_initializer;
 
   public:
-    declaration_node(int lineno, int qualifier, const std::string &identifier, cdk::expression_node *initializer) :
-        typed_node(lineno), _qualifier(qualifier), _identifier(identifier), _initializer(initializer) {}
+    declaration_node(int lineno, int qualifier, std::shared_ptr<cdk::basic_type> type, const std::string &identifier, cdk::expression_node *initializer) :
+        typed_node(lineno), _qualifier(qualifier), _identifier(identifier), _initializer(initializer) {
+          this->type(type);
+        }
 
     int qualifier() { return _qualifier; }
     
