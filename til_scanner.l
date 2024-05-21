@@ -105,9 +105,10 @@
 <X_STRING_IGN>.        ;
 
 0|[1-9][0-9]*          SAFE_STOI(10);
+0x0*                   yyerror("invalid hexadecimal integer literal");      
 0x[0-9A-Fa-f]+         SAFE_STOI(16);
 0[0-9]+                yyerror("invalid base 10 integer literal");
-0x[0-9a-zA-Z]*         yyerror("invalid hexadecimal integer literal");
+0x[0-9a-zA-Z]+         yyerror("invalid hexadecimal integer literal");
 
 [0-9]*\.[0-9]+([Ee][+-]?[0-9]+)?   SAFE_STOD;
 [0-9]+\.[0-9]*([Ee][+-]?[0-9]+)?   SAFE_STOD;
