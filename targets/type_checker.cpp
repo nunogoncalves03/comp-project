@@ -42,12 +42,6 @@ void til::type_checker::do_data_node(cdk::data_node *const node, int lvl) {
 void til::type_checker::do_double_node(cdk::double_node *const node, int lvl) {
   // EMPTY
 }
-void til::type_checker::do_and_node(cdk::and_node *const node, int lvl) {
-  // EMPTY
-}
-void til::type_checker::do_or_node(cdk::or_node *const node, int lvl) {
-  // EMPTY
-}
 
 //---------------------------------------------------------------------------
 
@@ -199,23 +193,86 @@ void til::type_checker::do_div_node(cdk::div_node *const node, int lvl) {
 void til::type_checker::do_mod_node(cdk::mod_node *const node, int lvl) {
   process_binary_arithmetic_expression(node, lvl, false, false, false);
 }
+
+void til::type_checker::process_binary_predicate_expression(
+  cdk::binary_operation_node *const node,
+  int lvl,
+  bool acceptDoubles,
+  bool acceptPointers
+) {
+  ASSERT_UNSPEC;
+
+  node->left()->accept(this, lvl + 2);
+
+  if (node->left()->is_typed(cdk::TYPE_INT)) {
+    node->right()->accept(this, lvl + 2);
+
+    if (node->right()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->right()->type(node->left()->type());
+    } else if (!node->right()->is_typed(cdk::TYPE_INT)
+          && !(acceptDoubles && node->right()->is_typed(cdk::TYPE_DOUBLE))
+          && !(acceptPointers && node->right()->is_typed(cdk::TYPE_POINTER))) {
+      throw std::string("right node type incompatible with integer in predicate binary expression");
+    }
+  } else if (acceptDoubles && node->left()->is_typed(cdk::TYPE_DOUBLE)) {
+    node->right()->accept(this, lvl + 2);
+
+    if (node->right()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->right()->type(node->left()->type());
+    } else if (!node->right()->is_typed(cdk::TYPE_INT) && !node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+      throw std::string("right node type incompatible with double in predicate binary expression");
+    }
+  } else if (acceptPointers && node->left()->is_typed(cdk::TYPE_POINTER)) {
+    node->right()->accept(this, lvl + 2);
+
+    if (node->right()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->right()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (!node->right()->is_typed(cdk::TYPE_INT) && !node->right()->is_typed(cdk::TYPE_POINTER)) {
+      throw std::string("right node type incompatible with pointer in predicate binary expression");
+    }
+  } else if (node->left()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->right()->accept(this, lvl + 2);
+
+    if (node->right()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->left()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+      node->right()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (node->right()->is_typed(cdk::TYPE_POINTER)) {
+      node->left()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (node->right()->is_typed(cdk::TYPE_INT) || (acceptDoubles && node->right()->is_typed(cdk::TYPE_DOUBLE))) {
+      node->left()->type(node->right()->type());
+    } else {
+      throw std::string("incompatible right argument type in predicate binary expression");
+    }
+  } else {
+    throw std::string("incompatible left argument type in predicate binary expression");
+  }
+
+  node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+}
+
 void til::type_checker::do_lt_node(cdk::lt_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, false);
 }
 void til::type_checker::do_le_node(cdk::le_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, false);
 }
 void til::type_checker::do_ge_node(cdk::ge_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, false);
 }
 void til::type_checker::do_gt_node(cdk::gt_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, false);
 }
 void til::type_checker::do_ne_node(cdk::ne_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, true);
 }
 void til::type_checker::do_eq_node(cdk::eq_node *const node, int lvl) {
-  // process_binary_arithmetic_expression(node, lvl);
+  process_binary_predicate_expression(node, lvl, true, true);
+}
+void til::type_checker::do_and_node(cdk::and_node *const node, int lvl) {
+  process_binary_predicate_expression(node, lvl, false, false);
+}
+void til::type_checker::do_or_node(cdk::or_node *const node, int lvl) {
+  process_binary_predicate_expression(node, lvl, false, false);
 }
 
 //---------------------------------------------------------------------------

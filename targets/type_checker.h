@@ -34,6 +34,12 @@ namespace til {
       bool acceptOnePointer,
       bool acceptTwoPointers
     );
+    void process_binary_predicate_expression(
+      cdk::binary_operation_node *const node,
+      int lvl,
+      bool acceptDoubles,
+      bool acceptPointers
+    );
     template<typename T>
     void process_literal(cdk::literal_node<T> *const node, int lvl) {
     }
