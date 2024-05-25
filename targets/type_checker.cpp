@@ -378,10 +378,22 @@ void til::type_checker::do_loop_node(til::loop_node *const node, int lvl) {
 
 void til::type_checker::do_if_node(til::if_node *const node, int lvl) {
   node->condition()->accept(this, lvl + 4);
+
+  if (node->condition()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->condition()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->condition()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("incompatible type in condition of if statement");
+  }
 }
 
 void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) {
   node->condition()->accept(this, lvl + 4);
+
+  if (node->condition()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->condition()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->condition()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("incompatible type in condition of if statement");
+  }
 }
 
 //---------------------------------------------------------------------------
