@@ -24,8 +24,8 @@ namespace til {
     }
 
   protected:
-    bool pointer_type_comparison(std::shared_ptr<cdk::basic_type> left,
-      std::shared_ptr<cdk::basic_type> right);
+    bool types_deep_match(std::shared_ptr<cdk::basic_type> left,
+      std::shared_ptr<cdk::basic_type> right, bool allow_covariance);
     void process_unary_expression(cdk::unary_operation_node *const node, int lvl, bool acceptDouble);
     void process_binary_arithmetic_expression(
       cdk::binary_operation_node *const node,

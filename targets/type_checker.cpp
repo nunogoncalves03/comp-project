@@ -7,19 +7,48 @@
 
 //---------------------------------------------------------------------------
 
-bool til::type_checker::pointer_type_comparison(std::shared_ptr<cdk::basic_type> left,
-      std::shared_ptr<cdk::basic_type> right) {
+bool til::type_checker::types_deep_match(std::shared_ptr<cdk::basic_type> left,
+      std::shared_ptr<cdk::basic_type> right, bool allow_covariance) {
   if (left->name() == cdk::TYPE_UNSPEC || right->name() == cdk::TYPE_UNSPEC) {
     return false;
+  } else if (left->name() == cdk::TYPE_FUNCTIONAL) {
+    if (right->name() != cdk::TYPE_FUNCTIONAL) {
+      return false;
+    }
+
+    auto left_func = cdk::functional_type::cast(left);
+    auto right_func = cdk::functional_type::cast(right);
+
+    if (left_func->input_length() != right_func->input_length()
+          || left_func->output_length() != right_func->output_length()) {
+      return false;
+    }
+
+    // Example:
+    //    ((int (double)) g1)
+    //    ((int (int)) f2)
+    //    (set f2 g1) ; ok: covariant types
+    for (size_t i = 0; i < left_func->input_length(); i++) {
+      if (!types_deep_match(right_func->input(i), left_func->input(i), allow_covariance)) {
+        return false;
+      }
+    }
+
+    // til only supports single return values
+    if (!types_deep_match(left_func->output(0), right_func->output(0), allow_covariance)) {
+      return false;
+    }
+
+    return true;
   } else if (left->name() == cdk::TYPE_POINTER) {
     if (right->name() != cdk::TYPE_POINTER) {
       return false;
     }
 
-    return pointer_type_comparison(cdk::reference_type::cast(left)->referenced(),
-        cdk::reference_type::cast(right)->referenced());
-  } else if (right->name() == cdk::TYPE_POINTER) {
-      return false;
+    return types_deep_match(cdk::reference_type::cast(left)->referenced(),
+        cdk::reference_type::cast(right)->referenced(), false);
+  } else if (allow_covariance && left->name() == cdk::TYPE_DOUBLE) {
+    return right->name() == cdk::TYPE_DOUBLE || right->name() == cdk::TYPE_INT;
   } else {
     return left == right;
   }
@@ -40,6 +69,18 @@ void til::type_checker::do_nil_node(cdk::nil_node *const node, int lvl) {
 }
 void til::type_checker::do_data_node(cdk::data_node *const node, int lvl) {
   // EMPTY
+}
+
+void til::type_checker::do_block_node(til::block_node *const node, int lvl) {
+  // FIXME: EMPTY
+}
+
+void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
+  // FIXME: EMPTY
+}
+
+void til::type_checker::do_next_node(til::next_node *const node, int lvl) {
+  // FIXME: EMPTY
 }
 
 //---------------------------------------------------------------------------
@@ -172,7 +213,7 @@ void til::type_checker::process_binary_arithmetic_expression(
     } else if (node->right()->is_typed(cdk::TYPE_UNSPEC)) {
       node->right()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
       node->type(node->left()->type());
-    } else if (acceptTwoPointers && pointer_type_comparison(node->left()->type(), node->right()->type())) {
+    } else if (acceptTwoPointers && types_deep_match(node->left()->type(), node->right()->type(), false)) {
       node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
     } else {
       throw std::string("right node type incompatible with pointer in arithmetic binary expression");
@@ -323,6 +364,10 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
   // node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
 }
 
+void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int lvl) {
+  node->argument()->accept(this, lvl + 2);
+}
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_function_node(til::function_node *const node, int lvl) {
@@ -335,9 +380,37 @@ void til::type_checker::do_function_node(til::function_node *const node, int lvl
   }
 }
 
-void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int lvl) {
-  node->argument()->accept(this, lvl + 2);
+void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
+  // We are in the block context, so we need to search in the function context itself
+  auto symbol = _symtab.find("@", 1);
+
+  if (symbol == nullptr) {
+    throw std::string("return statement defined outside of a function scope");
+  }
+
+  std::shared_ptr<cdk::functional_type> func_type = cdk::functional_type::cast(symbol->type());
+  // til only supports single return values
+  auto ret_type = func_type->output(0);
+
+  if (node->return_value() == nullptr) {
+    if (ret_type->name() != cdk::TYPE_VOID) {
+      throw std::string("no return value provided to a non-void return function");
+    }
+    return;
+  }
+
+  if (ret_type->name() == cdk::TYPE_VOID) {
+    throw std::string("provided a return value to a void return function");
+  }
+
+  node->return_value()->accept(this, lvl + 2);
+
+  if (!types_deep_match(ret_type, node->return_value()->type(), true)) {
+    throw std::string("incompatible return type");
+  }
 }
+
+//---------------------------------------------------------------------------
 
 void til::type_checker::do_print_node(til::print_node *const node, int lvl) {
   for (size_t i = 0; i < node->arguments()->size(); i++) {
@@ -353,8 +426,6 @@ void til::type_checker::do_print_node(til::print_node *const node, int lvl) {
     }
   }
 }
-
-//---------------------------------------------------------------------------
 
 void til::type_checker::do_read_node(til::read_node *const node, int lvl) {
   ASSERT_UNSPEC; // Don't override infered type by parent
@@ -399,22 +470,6 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
-  // FIXME: EMPTY
-}
-
-void til::type_checker::do_block_node(til::block_node *const node, int lvl) {
-  // FIXME: EMPTY
-}
-
-void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
-  // FIXME: EMPTY
-}
-
-void til::type_checker::do_next_node(til::next_node *const node, int lvl) {
-  // FIXME: EMPTY
-}
-
-void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
   // FIXME: EMPTY
 }
 
