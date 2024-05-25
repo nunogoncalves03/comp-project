@@ -290,7 +290,7 @@ void til::type_checker::do_variable_node(cdk::variable_node *const node, int lvl
   if (symbol != nullptr) {
     node->type(symbol->type());
   } else {
-    throw "undeclared variable '" + id + "'";
+    throw std::string("undeclared variable '" + id + "'");
   }
 }
 
@@ -340,7 +340,18 @@ void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int
 }
 
 void til::type_checker::do_print_node(til::print_node *const node, int lvl) {
-  node->arguments()->accept(this, lvl + 2);
+  for (size_t i = 0; i < node->arguments()->size(); i++) {
+    auto child = dynamic_cast<cdk::expression_node*>(node->arguments()->node(i));
+
+    child->accept(this, lvl + 4);
+
+    if (child->is_typed(cdk::TYPE_UNSPEC)) {
+      child->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (!child->is_typed(cdk::TYPE_INT) && !child->is_typed(cdk::TYPE_DOUBLE)
+              && !child->is_typed(cdk::TYPE_STRING)) {
+      throw std::string("incompatible type for argument " + std::to_string(i + 1) + " of print instruction");
+    }
+  }
 }
 
 //---------------------------------------------------------------------------
