@@ -480,7 +480,15 @@ void til::type_checker::do_null_pointer_node(til::null_pointer_node *const node,
 }
 
 void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_UNSPEC;
+  
+  node->argument()->accept(this, lvl + 2);
+
+  if (node->argument()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->argument()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  }
+
+  node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
 }
 
 void til::type_checker::do_pointer_index_node(til::pointer_index_node *const node, int lvl) {
