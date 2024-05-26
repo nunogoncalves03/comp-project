@@ -10,7 +10,8 @@ namespace til {
   class symbol {
     std::string _name;
     std::shared_ptr<cdk::basic_type> _type;
-    bool _is_program;
+    bool _is_program = false;
+    int _qualifier = -1;
 
   public:
     symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type) :
@@ -35,6 +36,12 @@ namespace til {
     }
     bool is_program(bool b) {
       return _is_program = b;
+    }
+    int qualifier() const {
+      return _qualifier;
+    }
+    int qualifier(int v) {
+      return _qualifier = v;
     }
   };
 

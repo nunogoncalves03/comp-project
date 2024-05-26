@@ -3,6 +3,8 @@
 #include ".auto/all_nodes.h"  // automatically generated
 #include <cdk/types/primitive_type.h>
 
+#include "til_parser.tab.h"
+
 #define ASSERT_UNSPEC { if (node->type() != nullptr && !node->is_typed(cdk::TYPE_UNSPEC)) return; }
 
 //---------------------------------------------------------------------------
@@ -54,7 +56,7 @@ bool til::type_checker::types_deep_match(std::shared_ptr<cdk::basic_type> left,
   }
 }
 
-bool til::type_checker::check_void_compatibility(std::shared_ptr<cdk::basic_type> left,
+bool til::type_checker::should_cast_pointer(std::shared_ptr<cdk::basic_type> left,
       std::shared_ptr<cdk::basic_type> right) {
   auto left_ref = cdk::reference_type::cast(left);
   auto right_ref = cdk::reference_type::cast(right);
@@ -363,7 +365,7 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
     auto left_ref = cdk::reference_type::cast(node->lvalue()->type());
     auto right_ref = cdk::reference_type::cast(node->rvalue()->type());
 
-    if (check_void_compatibility(left_ref, right_ref)) {
+    if (should_cast_pointer(left_ref, right_ref)) {
       node->rvalue()->type(node->lvalue()->type());
     }
   }
@@ -491,7 +493,71 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_declaration_node(til::declaration_node *const node, int lvl) {
-  // FIXME: EMPTY
+  if (node->type() != nullptr) { // node has a type
+    if (node->initializer() != nullptr) {
+      node->initializer()->accept(this, lvl + 2);
+
+      if (node->initializer()->is_typed(cdk::TYPE_UNSPEC)) {
+        if (node->is_typed(cdk::TYPE_DOUBLE)) {
+          node->initializer()->type(node->type());
+        } else {
+          node->initializer()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+        }
+      } else if (node->is_typed(cdk::TYPE_POINTER) && node->initializer()->is_typed(cdk::TYPE_POINTER)) {
+        auto node_ref = cdk::reference_type::cast(node->type());
+        auto initializer_ref = cdk::reference_type::cast(node->initializer()->type());
+        if (should_cast_pointer(node_ref, initializer_ref)) {
+          node->initializer()->type(node->type());
+        }
+      }
+
+      if (!types_deep_match(node->type(), node->initializer()->type(), true)) {
+        throw std::string("incompatible type in initializer for variable '" + node->identifier() + "'");
+      }
+    }
+  } else { // "var" case
+    node->initializer()->accept(this, lvl + 2);
+
+    if (node->initializer()->is_typed(cdk::TYPE_UNSPEC)) {
+      node->initializer()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+    } else if (node->initializer()->is_typed(cdk::TYPE_POINTER)) {
+      auto ref = cdk::reference_type::cast(node->initializer()->type());
+      if (ref->referenced()->name() == cdk::TYPE_UNSPEC) {
+        node->initializer()->type(cdk::reference_type::create(4,
+            cdk::primitive_type::create(4, cdk::TYPE_INT)));
+      }
+    } else if (node->initializer()->is_typed(cdk::TYPE_VOID)) {
+      throw std::string("variables can't be of type void");
+    }
+
+    node->type(node->initializer()->type());
+  }
+
+  if (node->qualifier() == tEXTERNAL && !node->is_typed(cdk::TYPE_FUNCTIONAL)) {
+    throw std::string("external declaration of non-function '" + node->identifier() + "'");
+  }
+
+  auto symbol = std::make_shared<til::symbol>(node->identifier(), node->type());
+  symbol->qualifier(node->qualifier());
+
+  if (!_symtab.insert(node->identifier(), symbol)) {
+    // Unable to insert, which means the symbol already exists.
+    // The only way this re-declaration is valid is if we had previously declared
+    // a symbol with the forward keyword and are have now found the implementation
+    // for that symbol, in which case we will replace it
+    
+    auto prev_declaration = _symtab.find(node->identifier());
+    if (prev_declaration->qualifier() == tFORWARD &&
+        types_deep_match(prev_declaration->type(), symbol->type(), false)) {
+      _symtab.replace(node->identifier(), symbol);
+      _parent->set_new_symbol(symbol);
+      return;
+    }
+
+    throw std::string("redeclaration of variable '" + node->identifier() + "'");
+  }
+
+  _parent->set_new_symbol(symbol);
 }
 
 void til::type_checker::do_null_pointer_node(til::null_pointer_node *const node, int lvl) {
@@ -581,7 +647,7 @@ void til::type_checker::do_function_call_node(til::function_call_node *const nod
       auto paramref = cdk::reference_type::cast(paramtype);
       auto argref = cdk::reference_type::cast(arg->type());
 
-      if (check_void_compatibility(paramref, argref)) {
+      if (should_cast_pointer(paramref, argref)) {
         arg->type(paramtype);
       }
     }
