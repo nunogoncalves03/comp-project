@@ -377,6 +377,16 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
 
 void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int lvl) {
   node->argument()->accept(this, lvl + 2);
+
+  if (node->argument()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->argument()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (node->argument()->is_typed(cdk::TYPE_POINTER)) {
+    auto ref = cdk::reference_type::cast(node->argument()->type());
+
+    if (ref->referenced()->name() == cdk::TYPE_UNSPEC) {
+      node->argument()->type(cdk::reference_type::create(4, cdk::primitive_type::create(4, cdk::TYPE_INT)));
+    }
+  }
 }
 
 //---------------------------------------------------------------------------
