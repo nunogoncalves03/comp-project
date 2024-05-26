@@ -54,6 +54,15 @@ bool til::type_checker::types_deep_match(std::shared_ptr<cdk::basic_type> left,
   }
 }
 
+bool til::type_checker::check_void_compatibility(std::shared_ptr<cdk::basic_type> left,
+      std::shared_ptr<cdk::basic_type> right) {
+  auto left_ref = cdk::reference_type::cast(left);
+  auto right_ref = cdk::reference_type::cast(right);
+  return right_ref->referenced()->name() == cdk::TYPE_UNSPEC
+            || right_ref->referenced()->name() == cdk::TYPE_VOID
+            || left_ref->referenced()->name() == cdk::TYPE_VOID;
+}
+
 //---------------------------------------------------------------------------
 
 void til::type_checker::do_sequence_node(cdk::sequence_node *const node, int lvl) {
@@ -517,5 +526,58 @@ void til::type_checker::do_pointer_index_node(til::pointer_index_node *const nod
 }
 
 void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_UNSPEC;
+
+  std::shared_ptr<cdk::functional_type> func_type;
+
+  if (node->function() == nullptr) { // recursive call ("@")
+    auto symbol = _symtab.find("@", 1);
+    if (symbol == nullptr) {
+      throw std::string("recursive call outside function");
+    } else if (symbol->is_program()) {
+      throw std::string("recursive call inside program declaration");
+    }
+
+    func_type = cdk::functional_type::cast(symbol->type());
+  } else {
+    node->function()->accept(this, lvl);
+
+    if (!node->function()->is_typed(cdk::TYPE_FUNCTIONAL)) {
+      throw std::string("incompatible type in function call");
+    }
+
+    func_type = cdk::functional_type::cast(node->function()->type());
+  }
+
+  if (func_type->input()->length() != node->arguments()->size()) {
+    throw std::string("wrong number of arguments in function call");
+  }
+
+  for (size_t i = 0; i < node->arguments()->size(); i++) {
+    auto arg = dynamic_cast<cdk::expression_node*>(node->arguments()->node(i));
+    arg->accept(this, lvl);
+
+    auto paramtype = func_type->input(i);
+
+    if (arg->is_typed(cdk::TYPE_UNSPEC)) {
+      if (paramtype->name() == cdk::TYPE_DOUBLE) {
+        arg->type(cdk::primitive_type::create(8, cdk::TYPE_DOUBLE));
+      } else {
+        arg->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+      }
+    } else if (arg->is_typed(cdk::TYPE_POINTER) && paramtype->name() == cdk::TYPE_POINTER) {
+      auto paramref = cdk::reference_type::cast(paramtype);
+      auto argref = cdk::reference_type::cast(arg->type());
+
+      if (check_void_compatibility(paramref, argref)) {
+        arg->type(paramtype);
+      }
+    }
+
+    if (!types_deep_match(paramtype, arg->type(), true)) {
+      throw std::string("incompatible type for argument " + std::to_string(i + 1) + " in function call");
+    }
+  }
+
+  node->type(func_type->output(0));
 }
