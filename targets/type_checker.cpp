@@ -492,7 +492,28 @@ void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
 }
 
 void til::type_checker::do_pointer_index_node(til::pointer_index_node *const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_UNSPEC;
+
+  node->base()->accept(this, lvl + 2);
+  if (!node->base()->is_typed(cdk::TYPE_POINTER)) {
+    throw std::string("incompatible type in pointer index's base");
+  }
+
+  node->index()->accept(this, lvl + 2);
+  if (node->index()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->index()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->index()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("incompatible type in pointer index's index");
+  }
+
+  auto base_type = cdk::reference_type::cast(node->base()->type());
+
+  if (base_type->referenced()->name() == cdk::TYPE_UNSPEC) {
+    base_type = cdk::reference_type::create(4, cdk::primitive_type::create(4, cdk::TYPE_INT));
+    node->base()->type(base_type);
+  }
+
+  node->type(base_type->referenced());
 }
 
 void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {
