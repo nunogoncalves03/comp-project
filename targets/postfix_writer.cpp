@@ -313,14 +313,10 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
 
 void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
+
   node->argument()->accept(this, lvl); // determine the value
-  if (node->argument()->is_typed(cdk::TYPE_INT)) {
-    _pf.TRASH(4); // delete the evaluated value
-  } else if (node->argument()->is_typed(cdk::TYPE_STRING)) {
-    _pf.TRASH(4); // delete the evaluated value's address
-  } else {
-    std::cerr << "ERROR: CANNOT HAPPEN!" << std::endl;
-    exit(1);
+  if (node->argument()->type()->size() > 0) {
+    _pf.TRASH(node->argument()->type()->size());
   }
 }
 
