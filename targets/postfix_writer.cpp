@@ -162,10 +162,13 @@ void til::postfix_writer::do_mul_node(cdk::mul_node * const node, int lvl) {
   }
 }
 void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.DIV();
+  prepareIDBinaryExpression(node, lvl);
+
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DDIV();
+  } else {
+    _pf.DIV();
+  }
 }
 void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
