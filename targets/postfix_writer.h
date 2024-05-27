@@ -13,6 +13,10 @@ namespace til {
   //!
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
+
+    // semantic analysis
+    bool _inFunctionBody;
+
     cdk::basic_postfix_emitter &_pf;
     int _lbl;
 

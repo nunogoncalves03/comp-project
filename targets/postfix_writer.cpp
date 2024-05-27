@@ -13,7 +13,11 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
   // EMPTY
 }
 void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
-  // EMPTY
+  if (_inFunctionBody) {
+    _pf.DOUBLE(node->value());    // stack
+  } else {
+    _pf.SDOUBLE(node->value());   // DATA segment
+  }
 }
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
   // EMPTY
