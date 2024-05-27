@@ -133,9 +133,38 @@ void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
 }
 void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.SUB();
+
+  node->left()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) && node->left()->is_typed(cdk::TYPE_INT)) {
+    _pf.I2D();
+  } else if (node->is_typed(cdk::TYPE_POINTER) && node->left()->is_typed(cdk::TYPE_INT)) {
+    auto ref = cdk::reference_type::cast(node->type());
+    _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
+    _pf.MUL();
+  }
+
+  node->right()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) && node->right()->is_typed(cdk::TYPE_INT)) {
+    _pf.I2D();
+  } else if (node->is_typed(cdk::TYPE_POINTER) && node->right()->is_typed(cdk::TYPE_INT)) {
+    auto ref = cdk::reference_type::cast(node->type());
+    _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
+    _pf.MUL();
+  }
+
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DSUB();
+  } else {
+    _pf.SUB();
+  }
+
+  if (node->left()->is_typed(cdk::TYPE_POINTER) && node->right()->is_typed(cdk::TYPE_POINTER)) {
+    // the difference between two pointers results in the number of objects of the type they reference
+    // that fit between them, so we must divide by the size of the type
+    auto lref = cdk::reference_type::cast(node->left()->type());
+    _pf.INT(std::max(static_cast<size_t>(1), lref->referenced()->size()));
+    _pf.DIV();
+  }
 }
 
 void til::postfix_writer::prepareIDBinaryExpression(cdk::binary_operation_node * const node, int lvl) {
