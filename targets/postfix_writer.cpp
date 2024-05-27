@@ -248,8 +248,17 @@ void til::postfix_writer::do_variable_node(cdk::variable_node * const node, int 
 
 void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
+  
   node->lvalue()->accept(this, lvl);
-  _pf.LDINT(); // depends on type size
+
+  // FIXME: consider external functions
+
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.LDDOUBLE();
+  } else {
+    // integers, pointers, and strings
+    _pf.LDINT();
+  }
 }
 
 void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
