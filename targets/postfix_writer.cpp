@@ -78,9 +78,15 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
   _pf.LABEL(mklbl(lbl1 = ++_lbl)); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
 
-  /* leave the address on the stack */
-  _pf.TEXT(); // return to the TEXT segment
-  _pf.ADDR(mklbl(lbl1)); // the string to be printed
+  if (_inFunctionBody) {
+    /* leave the address on the stack */
+    // FIXME: implement function labels
+    _pf.TEXT(); // return to the TEXT segment
+    _pf.ADDR(mklbl(lbl1)); // the string to be stored
+  } else {
+    _pf.DATA(); // return to the DATA segment
+    _pf.SADDR(mklbl(lbl1)); // the string to be stored
+  }
 }
 
 //---------------------------------------------------------------------------
