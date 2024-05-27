@@ -33,6 +33,7 @@ namespace til {
   
   protected:
     void prepareIDBinaryExpression(cdk::binary_operation_node * const node, int lvl);
+    void prepareIDPredicateComparison(cdk::binary_operation_node * const node, int lvl);
 
   private:
     /** Method used to generate sequential labels. */
