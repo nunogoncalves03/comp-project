@@ -16,7 +16,7 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
 void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_inFunctionBody) {
+  if (_in_function_body) {
     _pf.DOUBLE(node->value());    // stack
   } else {
     _pf.SDOUBLE(node->value());   // DATA segment
@@ -67,7 +67,7 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_inFunctionBody) {
+  if (_in_function_body) {
     _pf.INT(node->value());    // stack
   } else {
     _pf.SINT(node->value());   // DATA segment
@@ -85,7 +85,7 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
   _pf.LABEL(mklbl(lbl1 = ++_lbl)); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
 
-  if (_inFunctionBody) {
+  if (_in_function_body) {
     /* leave the address on the stack */
     // FIXME: implement function labels
     _pf.TEXT(); // return to the TEXT segment
@@ -298,33 +298,81 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
 void til::postfix_writer::do_function_node(til::function_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  // Note that Simple doesn't have functions. Thus, it doesn't need
-  // a function node. However, it must start in the main function.
-  // The ProgramNode (representing the whole program) doubles as a
-  // main function node.
+  std::string function_label;
+  if (node->is_program()) {
+    function_label = "_main"; // RTS mandates that its name be "_main"
+  } else {
+    function_label = mklbl(++_lbl);
+  }
+  _function_labels.push(function_label);
 
-  // generate the main function (RTS mandates that its name be "_main")
-  _pf.TEXT();
+  _pf.TEXT(_function_labels.top());
   _pf.ALIGN();
-  _pf.GLOBAL("_main", _pf.FUNC());
-  _pf.LABEL("_main");
-  _pf.ENTER(0);  // Simple doesn't implement local variables
+  if (node->is_program()) {
+    _pf.GLOBAL("_main", _pf.FUNC());
+  }
+  _pf.LABEL(_function_labels.top());
 
+  auto old_offset = _offset;
+  _offset = 8; // function arguments start at +8
+  _symtab.push(); // scope of args
+
+  _in_function_args = true;
   node->arguments()->accept(this, lvl);
-  node->declarations()->accept(this, lvl);
+  _in_function_args = false;
+
+  // compute stack size to be reserved for local variables
+  frame_size_calculator fsc(_compiler, _symtab);
+  node->declarations()->accept(&fsc, lvl);
+  _pf.ENTER(fsc.localsize());
+
+  auto old_function_ret_label = _current_function_ret_label;
+  _current_function_ret_label = mklbl(++_lbl);
+
+  auto old_function_loop_labels = _current_function_loop_labels;
+  _current_function_loop_labels = new std::vector<std::pair<std::string, std::string>>();
+
+  _offset = 0; // local variables start at offset 0
+
+  node->declarations()->accept(this, lvl); // FIXME: Not checking for final instructions (not a block_node)
   node->instructions()->accept(this, lvl);
 
-  // end the main function
-  _pf.INT(0);
-  _pf.STFVAL32();
+  // FIXME: should we do this? what about the non-zero returns?
+  // if (node->is_program()) {
+  //   // return 0 if main has no return statement
+  //   _pf.INT(0);
+  //   _pf.STFVAL32();
+  // }
+
+  _pf.ALIGN();
+  _pf.LABEL(_current_function_ret_label);
   _pf.LEAVE();
   _pf.RET();
 
-  // these are just a few library function imports
-  _pf.EXTERN("readi");
-  _pf.EXTERN("printi");
-  _pf.EXTERN("prints");
-  _pf.EXTERN("println");
+  delete _current_function_loop_labels;
+  _current_function_loop_labels = old_function_loop_labels;
+  _current_function_ret_label = old_function_ret_label;
+  _offset = old_offset;
+  _symtab.pop();
+  _function_labels.pop();
+
+  if (node->is_program()) {
+    for (const std::string &name : _external_functions_to_declare) {
+      _pf.EXTERN(name);
+    }
+  } else {
+    // If the current function is a local variable of another function, we need
+    // to place its address in the parent function's stack (because functions are expressions),
+    // otherwise we need to place it in the DATA segment (because other than locally,
+    // functions can only be declared in the global_decls section)
+    if (_in_function_body) {
+      _pf.TEXT(_function_labels.top());
+      _pf.ADDR(function_label);
+    } else {
+      _pf.DATA();
+      _pf.SADDR(function_label);
+    }
+  }
 }
 
 //---------------------------------------------------------------------------
@@ -483,7 +531,7 @@ void til::postfix_writer::do_return_node(til::return_node * const node, int lvl)
 void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_inFunctionBody) {
+  if (_in_function_body) {
     _pf.INT(0);
   } else {
     _pf.SINT(0);

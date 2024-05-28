@@ -6,6 +6,7 @@
 #include <optional>
 #include <set>
 #include <sstream>
+#include <stack>
 #include <cdk/emitters/basic_postfix_emitter.h>
 
 namespace til {
@@ -16,15 +17,21 @@ namespace til {
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
 
+    std::stack<std::string> _function_labels; // the history of function labels visited
     std::optional<std::string> _external_function_name; // name of external function to call
     std::set<std::string> _external_functions_to_declare; // set of external functions to declare
 
     // the history of loop labels visited during the current function's visit
     // format: pair (condition_label, end_label)
     std::vector<std::pair<std::string, std::string>> *_current_function_loop_labels;
+    
+    // to know where a return_node should jump to for performing the actual return
+    std::string _current_function_ret_label;
 
     // semantic analysis
-    bool _inFunctionBody, _visited_final_instruction;
+    bool _in_function_body, _in_function_args, _visited_final_instruction;
+
+    int _offset;
 
     cdk::basic_postfix_emitter &_pf;
     int _lbl;
