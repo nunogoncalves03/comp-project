@@ -3,6 +3,8 @@
 
 #include "targets/basic_ast_visitor.h"
 
+#include <optional>
+#include <set>
 #include <sstream>
 #include <cdk/emitters/basic_postfix_emitter.h>
 
@@ -13,6 +15,9 @@ namespace til {
   //!
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
+
+    std::optional<std::string> _external_function_name; // name of external function to be called, if any
+    std::set<std::string> _external_functions_to_declare; // set of external functions to declare
 
     // semantic analysis
     bool _inFunctionBody;

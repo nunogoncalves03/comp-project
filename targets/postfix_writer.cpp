@@ -13,6 +13,8 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
   // EMPTY
 }
 void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
   if (_inFunctionBody) {
     _pf.DOUBLE(node->value());    // stack
   } else {
@@ -62,6 +64,8 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
   if (_inFunctionBody) {
     _pf.INT(node->value());    // stack
   } else {
@@ -70,6 +74,8 @@ void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lv
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
   int lbl1;
 
   /* generate the string */
@@ -251,7 +257,9 @@ void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl)
   
   node->lvalue()->accept(this, lvl);
 
-  // FIXME: consider external functions
+  if (_external_function_name) {
+    return; // name passed through this field; nothing in stack to be loaded
+  }
 
   if (node->is_typed(cdk::TYPE_DOUBLE)) {
     _pf.LDDOUBLE();
@@ -282,6 +290,8 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_function_node(til::function_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
   // // Note that Simple doesn't have functions. Thus, it doesn't need
   // // a function node. However, it must start in the main function.
   // // The ProgramNode (representing the whole program) doubles as a
@@ -321,21 +331,32 @@ void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, 
 }
 
 void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
-  // FIXME
+  ASSERT_SAFE_EXPRESSIONS;
 
-  // ASSERT_SAFE_EXPRESSIONS;
-  // node->argument()->accept(this, lvl); // determine the value to print
-  // if (node->argument()->is_typed(cdk::TYPE_INT)) {
-  //   _pf.CALL("printi");
-  //   _pf.TRASH(4); // delete the printed value
-  // } else if (node->argument()->is_typed(cdk::TYPE_STRING)) {
-  //   _pf.CALL("prints");
-  //   _pf.TRASH(4); // delete the printed value's address
-  // } else {
-  //   std::cerr << "ERROR: CANNOT HAPPEN!" << std::endl;
-  //   exit(1);
-  // }
-  // _pf.CALL("println"); // print a newline
+  for (size_t ix = 0; ix < node->arguments()->size(); ix++) {
+    auto child = dynamic_cast<cdk::expression_node*>(node->arguments()->node(ix));
+
+    std::shared_ptr<cdk::basic_type> etype = child->type();
+    child->accept(this, lvl); // expression to print
+    if (etype->name() == cdk::TYPE_INT) {
+      _external_functions_to_declare.insert("printi");
+      _pf.CALL("printi");
+      _pf.TRASH(4); // trash int
+    } else if (etype->name() == cdk::TYPE_DOUBLE) {
+      _external_functions_to_declare.insert("printd");
+      _pf.CALL("printd");
+      _pf.TRASH(8); // trash double
+    } else if (etype->name() == cdk::TYPE_STRING) {
+      _external_functions_to_declare.insert("prints");
+      _pf.CALL("prints");
+      _pf.TRASH(4); // trash char pointer
+    }
+  }
+
+  if (node->add_newline()) {
+    _external_functions_to_declare.insert("println");
+    _pf.CALL("println");
+  }
 }
 
 //---------------------------------------------------------------------------
