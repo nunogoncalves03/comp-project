@@ -118,6 +118,7 @@ void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
     _pf.I2D();
   } else if (node->is_typed(cdk::TYPE_POINTER) && node->left()->is_typed(cdk::TYPE_INT)) {
     auto ref = cdk::reference_type::cast(node->type());
+    // void type has no size, but we'll allocate 1 byte
     _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
     _pf.MUL();
   }
@@ -127,6 +128,7 @@ void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
     _pf.I2D();
   } else if (node->is_typed(cdk::TYPE_POINTER) && node->right()->is_typed(cdk::TYPE_INT)) {
     auto ref = cdk::reference_type::cast(node->type());
+    // void type has no size, but we'll allocate 1 byte
     _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
     _pf.MUL();
   }
@@ -145,6 +147,7 @@ void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
     _pf.I2D();
   } else if (node->is_typed(cdk::TYPE_POINTER) && node->left()->is_typed(cdk::TYPE_INT)) {
     auto ref = cdk::reference_type::cast(node->type());
+    // void type has no size, but we'll allocate 1 byte
     _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
     _pf.MUL();
   }
@@ -154,6 +157,7 @@ void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
     _pf.I2D();
   } else if (node->is_typed(cdk::TYPE_POINTER) && node->right()->is_typed(cdk::TYPE_INT)) {
     auto ref = cdk::reference_type::cast(node->type());
+    // void type has no size, but we'll allocate 1 byte
     _pf.INT(std::max(static_cast<size_t>(1), ref->referenced()->size()));
     _pf.MUL();
   }
@@ -168,6 +172,7 @@ void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
     // the difference between two pointers results in the number of objects of the type they reference
     // that fit between them, so we must divide by the size of the type
     auto lref = cdk::reference_type::cast(node->left()->type());
+    // void type has no size, but we'll allocate 1 byte
     _pf.INT(std::max(static_cast<size_t>(1), lref->referenced()->size()));
     _pf.DIV();
   }
@@ -510,5 +515,13 @@ void til::postfix_writer::do_function_call_node(til::function_call_node * const 
 }
 
 void til::postfix_writer::do_allocation_node(til::allocation_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  node->argument()->accept(this, lvl);
+  auto ref = cdk::reference_type::cast(node->type())->referenced();
+  // void type has no size, but we'll allocate 1 byte
+  _pf.INT(std::max(static_cast<size_t>(1), ref->size()));
+  _pf.MUL();
+  _pf.ALLOC(); // allocate
+  _pf.SP();    // put base pointer in stack (reference to the allocated memory)
 }
