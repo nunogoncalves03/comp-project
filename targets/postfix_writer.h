@@ -16,11 +16,15 @@ namespace til {
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
 
-    std::optional<std::string> _external_function_name; // name of external function to be called, if any
+    std::optional<std::string> _external_function_name; // name of external function to call
     std::set<std::string> _external_functions_to_declare; // set of external functions to declare
 
+    // the history of loop labels visited during the current function's visit
+    // format: pair (condition_label, end_label)
+    std::vector<std::pair<std::string, std::string>> *_current_function_loop_labels;
+
     // semantic analysis
-    bool _inFunctionBody;
+    bool _inFunctionBody, _visited_final_instruction;
 
     cdk::basic_postfix_emitter &_pf;
     int _lbl;

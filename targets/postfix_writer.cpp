@@ -379,13 +379,25 @@ void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
 
 void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1, lbl2;
-  _pf.LABEL(mklbl(lbl1 = ++_lbl));
+
+  int cond_label, end_label;
+
+  _pf.ALIGN();
+  _pf.LABEL(mklbl(cond_label = ++_lbl));
   node->condition()->accept(this, lvl);
-  _pf.JZ(mklbl(lbl2 = ++_lbl));
+  _pf.JZ(mklbl(end_label = ++_lbl));
+
+  _current_function_loop_labels->push_back(std::make_pair(mklbl(cond_label), mklbl(end_label)));
   node->block()->accept(this, lvl + 2);
-  _pf.JMP(mklbl(lbl1));
-  _pf.LABEL(mklbl(lbl2));
+  // if the loop block is a single instruction, we need to set this back to false
+  // since this variable is only used while visiting a block_node, which will throw
+  // an error if there was a final instruction before the last line, and set this to false otherwise
+  _visited_final_instruction = false;
+  _current_function_loop_labels->pop_back();
+
+  _pf.JMP(mklbl(cond_label));
+  _pf.ALIGN();
+  _pf.LABEL(mklbl(end_label));
 }
 
 //---------------------------------------------------------------------------
