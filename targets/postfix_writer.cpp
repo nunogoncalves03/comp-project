@@ -473,7 +473,13 @@ void til::postfix_writer::do_return_node(til::return_node * const node, int lvl)
 }
 
 void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  if (_inFunctionBody) {
+    _pf.INT(0);
+  } else {
+    _pf.SINT(0);
+  }
 }
 
 void til::postfix_writer::do_address_of_node(til::address_of_node * const node, int lvl) {
