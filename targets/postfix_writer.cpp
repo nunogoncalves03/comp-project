@@ -442,7 +442,22 @@ void til::postfix_writer::do_declaration_node(til::declaration_node * const node
 }
 
 void til::postfix_writer::do_block_node(til::block_node * const node, int lvl) {
-  // FIXME: EMPTY
+  _symtab.push(); // for block-local vars
+
+  node->declarations()->accept(this, lvl + 2);
+
+  _visited_final_instruction = false;
+  for (size_t i = 0; i < node->instructions()->size(); i++) {
+    if (_visited_final_instruction) {
+      std::cerr << node->instructions()->node(i)->lineno() << ": unreachable code" << std::endl;
+      return;
+    }
+
+    node->instructions()->node(i)->accept(this, lvl + 2);
+  }
+  _visited_final_instruction = false;
+
+  _symtab.pop();
 }
 
 void til::postfix_writer::do_stop_node(til::stop_node * const node, int lvl) {
