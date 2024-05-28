@@ -483,7 +483,10 @@ void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const no
 }
 
 void til::postfix_writer::do_address_of_node(til::address_of_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  // since the argument is an lvalue, it is already an address
+  node->argument()->accept(this, lvl + 2);
 }
 
 void til::postfix_writer::do_sizeof_node(til::sizeof_node * const node, int lvl) {
