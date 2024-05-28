@@ -517,11 +517,45 @@ void til::postfix_writer::do_block_node(til::block_node * const node, int lvl) {
 }
 
 void til::postfix_writer::do_stop_node(til::stop_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  size_t level = static_cast<size_t>(node->level());
+
+  if (level == 0) {
+    std::cerr << node->lineno() << ": invalid stop node argument" << std::endl;
+    return;
+  } else if (_current_function_loop_labels->size() < level) {
+    std::cerr << node->lineno() << ": trying to break out of more loops than existing ones (" +
+      std::to_string(_current_function_loop_labels->size()) + ")" << std::endl;
+    return;
+  }
+
+  const size_t index = _current_function_loop_labels->size() - level;
+  const std::string &label = std::get<1>(_current_function_loop_labels->at(index));
+  _pf.JMP(label);
+
+  _visited_final_instruction = true;
 }
 
 void til::postfix_writer::do_next_node(til::next_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  size_t level = static_cast<size_t>(node->level());
+
+  if (level == 0) {
+    std::cerr << node->lineno() << ": invalid next node argument" << std::endl;
+    return;
+  } else if (_current_function_loop_labels->size() < level) {
+    std::cerr << node->lineno() << ": trying to skip an iteration of a non-existing loop (depth: " +
+      std::to_string(_current_function_loop_labels->size()) + ")" << std::endl;
+    return;
+  }
+
+  const size_t index = _current_function_loop_labels->size() - level;
+  const std::string &label = std::get<0>(_current_function_loop_labels->at(index));
+  _pf.JMP(label);
+
+  _visited_final_instruction = true;
 }
 
 void til::postfix_writer::do_return_node(til::return_node * const node, int lvl) {
