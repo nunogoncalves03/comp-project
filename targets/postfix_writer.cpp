@@ -408,6 +408,11 @@ void til::postfix_writer::do_if_node(til::if_node * const node, int lvl) {
   node->condition()->accept(this, lvl);
   _pf.JZ(mklbl(lbl1 = ++_lbl));
   node->block()->accept(this, lvl + 2);
+  // if the if block is a single instruction, we need to set this back to false
+  // since this variable is only used while visiting a block_node, which will throw
+  // an error if there was a final instruction before the last line, and set this to false otherwise
+  _visited_final_instruction = false;
+  _pf.ALIGN();
   _pf.LABEL(mklbl(lbl1));
 }
 
