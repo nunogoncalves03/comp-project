@@ -420,14 +420,19 @@ void til::postfix_writer::do_if_node(til::if_node * const node, int lvl) {
 
 void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1, lbl2;
+
+  int lbl_else, lbl_end;
   node->condition()->accept(this, lvl);
-  _pf.JZ(mklbl(lbl1 = ++_lbl));
+  _pf.JZ(mklbl(lbl_else = ++_lbl));
   node->thenblock()->accept(this, lvl + 2);
-  _pf.JMP(mklbl(lbl2 = ++_lbl));
-  _pf.LABEL(mklbl(lbl1));
+  _visited_final_instruction = false; // same as in if_node
+  _pf.JMP(mklbl(lbl_end = ++_lbl));
+  _pf.ALIGN();
+  _pf.LABEL(mklbl(lbl_else));
   node->elseblock()->accept(this, lvl + 2);
-  _pf.LABEL(mklbl(lbl1 = lbl2));
+  _visited_final_instruction = false; // same as in if_node
+  _pf.ALIGN();
+  _pf.LABEL(mklbl(lbl_end));
 }
 
 //---------------------------------------------------------------------------
