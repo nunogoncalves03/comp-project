@@ -559,7 +559,31 @@ void til::postfix_writer::do_next_node(til::next_node * const node, int lvl) {
 }
 
 void til::postfix_writer::do_return_node(til::return_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  // type_checker already made sure that the we are inside of a function and that
+  // the return_node is compatible with the function's return type
+  auto symbol = _symtab.find("@", 1);
+  // til only supports single return values
+  auto return_type = cdk::functional_type::cast(symbol->type())->output(0);
+
+  if (return_type->name() != cdk::TYPE_VOID) {
+    node->return_value()->accept(this, lvl + 2);
+
+    if (return_type->name() == cdk::TYPE_INT || return_type->name() == cdk::TYPE_STRING
+        || return_type->name() == cdk::TYPE_POINTER) {
+      _pf.STFVAL32();
+    } else if (return_type->name() == cdk::TYPE_DOUBLE) {
+      if (node->return_value()->type()->name() == cdk::TYPE_INT) _pf.I2D();
+      _pf.STFVAL64();
+    } else {
+      std::cerr << node->lineno() << ": should not happen: unknown return type" << std::endl;
+      return;
+    }
+  }
+
+  _pf.JMP(_current_function_ret_label);
+  _visited_final_instruction = true;
 }
 
 void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
