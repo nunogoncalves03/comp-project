@@ -18,7 +18,7 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
 void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_in_function_body) {
+  if (inFunction()) {
     _pf.DOUBLE(node->value());    // stack
   } else {
     _pf.SDOUBLE(node->value());   // DATA segment
@@ -69,7 +69,7 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_in_function_body) {
+  if (inFunction()) {
     _pf.INT(node->value());    // stack
   } else {
     _pf.SINT(node->value());   // DATA segment
@@ -87,7 +87,7 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
   _pf.LABEL(mklbl(lbl1 = ++_lbl)); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
 
-  if (_in_function_body) {
+  if (inFunction()) {
     /* leave the address on the stack */
     _pf.TEXT(_function_labels.top()); // return to the TEXT segment
     _pf.ADDR(mklbl(lbl1)); // the string to be stored
@@ -334,6 +334,7 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
   // compute stack size to be reserved for local variables
   frame_size_calculator fsc(_compiler, _symtab);
   node->declarations()->accept(&fsc, lvl);
+  node->instructions()->accept(&fsc, lvl);
   _pf.ENTER(fsc.localsize());
 
   auto old_function_ret_label = _current_function_ret_label;
@@ -344,8 +345,9 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
 
   _offset = 0; // local variables start at offset 0
 
-  node->declarations()->accept(this, lvl); // FIXME: Not checking for final instructions (not a block_node)
-  node->instructions()->accept(this, lvl);
+  // FIXME: Not checking for final instructions (not a block_node)
+  const auto block = new til::block_node(node->lineno(), node->declarations(), node->instructions());
+  block->accept(this, lvl);
 
   // FIXME: should we do this? what about the non-zero returns?
   if (node->is_program()) {
@@ -375,7 +377,7 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
     // to place its address in the parent function's stack (because functions are expressions),
     // otherwise we need to place it in the DATA segment (because other than locally,
     // functions can only be declared in the global_decls section)
-    if (_in_function_body) {
+    if (inFunction()) {
       _pf.TEXT(_function_labels.top());
       _pf.ADDR(function_label);
     } else {
@@ -507,7 +509,7 @@ void til::postfix_writer::do_declaration_node(til::declaration_node * const node
   ASSERT_SAFE_EXPRESSIONS;
 
   int offset = 0, typesize = node->type()->size(); // in bytes
-  if (_in_function_body) {
+  if (inFunction()) {
     _offset -= typesize;
     offset = _offset;
   } else if (_in_function_args) {
@@ -522,7 +524,7 @@ void til::postfix_writer::do_declaration_node(til::declaration_node * const node
   symbol->offset(offset);
   reset_new_symbol();
 
-  if (_in_function_body) {
+  if (inFunction()) {
     // function arguments and unitialized local variables don't need aditional treatment
     if (_in_function_args || node->initializer() == nullptr) {
       return;
@@ -685,7 +687,7 @@ void til::postfix_writer::do_return_node(til::return_node * const node, int lvl)
 void til::postfix_writer::do_null_pointer_node(til::null_pointer_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  if (_in_function_body) {
+  if (inFunction()) {
     _pf.INT(0);
   } else {
     _pf.SINT(0);

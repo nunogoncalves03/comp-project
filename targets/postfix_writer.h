@@ -29,7 +29,7 @@ namespace til {
     std::string _current_function_ret_label;
 
     // semantic analysis
-    bool _in_function_body, _in_function_args, _visited_final_instruction;
+    bool _in_function_body = false, _in_function_args = false, _visited_final_instruction = false;
 
     int _offset;
 
@@ -60,6 +60,10 @@ namespace til {
       else
         oss << "_L" << lbl;
       return oss.str();
+    }
+
+    inline bool inFunction() {
+      return !_function_labels.empty();
     }
 
   public:
