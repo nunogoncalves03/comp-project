@@ -89,8 +89,7 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
 
   if (_in_function_body) {
     /* leave the address on the stack */
-    // FIXME: implement function labels
-    _pf.TEXT(); // return to the TEXT segment
+    _pf.TEXT(_function_labels.top()); // return to the TEXT segment
     _pf.ADDR(mklbl(lbl1)); // the string to be stored
   } else {
     _pf.DATA(); // return to the DATA segment
@@ -349,11 +348,11 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
   node->instructions()->accept(this, lvl);
 
   // FIXME: should we do this? what about the non-zero returns?
-  // if (node->is_program()) {
-  //   // return 0 if main has no return statement
-  //   _pf.INT(0);
-  //   _pf.STFVAL32();
-  // }
+  if (node->is_program()) {
+    // return 0 if main has no return statement
+    _pf.INT(0);
+    _pf.STFVAL32();
+  }
 
   _pf.ALIGN();
   _pf.LABEL(_current_function_ret_label);
