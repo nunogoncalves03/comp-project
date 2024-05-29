@@ -717,7 +717,51 @@ void til::postfix_writer::do_pointer_index_node(til::pointer_index_node * const 
 }
 
 void til::postfix_writer::do_function_call_node(til::function_call_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  std::shared_ptr<cdk::functional_type> func_type;
+  if (node->function() == nullptr) { // recursive call; "@"
+    auto symbol = _symtab.find("@", 1);
+    func_type = cdk::functional_type::cast(symbol->type());
+  } else {
+    func_type = cdk::functional_type::cast(node->function()->type());
+  }
+
+  size_t args_size = 0;
+  if (node->arguments()->size() > 0) {
+    for (int ax = node->arguments()->size() - 1; ax >= 0; ax--) {
+      cdk::expression_node *arg = dynamic_cast<cdk::expression_node*>(node->arguments()->node(ax));
+      arg->accept(this, lvl + 2);
+      if (func_type->input(ax)->name() == cdk::TYPE_DOUBLE && arg->is_typed(cdk::TYPE_INT)) {
+        _pf.I2D();
+      }
+      args_size += func_type->input(ax)->size();
+    }
+  }
+
+  _external_function_name = std::nullopt;
+  if (node->function() == nullptr) { // recursive call; "@"
+    _pf.ADDR(_function_labels.top());
+  } else {
+    node->function()->accept(this, lvl);
+  }
+
+  if (_external_function_name) {
+    _pf.CALL(*_external_function_name);
+    _external_function_name = std::nullopt;
+  } else {
+    _pf.BRANCH();
+  }
+
+  if (args_size != 0) {
+    _pf.TRASH(args_size);
+  }
+
+  if (func_type->output(0)->name() == cdk::TYPE_DOUBLE) {
+    _pf.LDFVAL64();
+  } else if (func_type->output(0)->name() != cdk::TYPE_VOID) {
+    _pf.LDFVAL32();
+  }
 }
 
 void til::postfix_writer::do_allocation_node(til::allocation_node * const node, int lvl) {
