@@ -12,6 +12,7 @@ namespace til {
     std::shared_ptr<cdk::basic_type> _type;
     bool _is_program = false;
     int _qualifier = -1;
+    int _offset = 0; // 0 (zero) means global variable/function
 
   public:
     symbol(const std::string &name, std::shared_ptr<cdk::basic_type> type) :
@@ -42,6 +43,15 @@ namespace til {
     }
     int qualifier(int v) {
       return _qualifier = v;
+    }
+    int offset() const {
+      return _offset;
+    }
+    int offset(int v) {
+      return _offset = v;
+    }
+    bool global() const {
+      return _offset == 0;
     }
   };
 

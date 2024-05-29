@@ -5,6 +5,8 @@
 #include "targets/frame_size_calculator.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
 
+#include "til_parser.tab.h"
+
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
@@ -254,8 +256,16 @@ void til::postfix_writer::do_eq_node(cdk::eq_node * const node, int lvl) {
 
 void til::postfix_writer::do_variable_node(cdk::variable_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  // simplified generation: all variables are global
-  _pf.ADDR(node->name());
+
+  auto symbol = _symtab.find(node->name()); // type checker ensured symbol exists
+
+  if (symbol->qualifier() == tEXTERNAL) {
+    _external_function_name = symbol->name();
+  } else if (symbol->global()) {
+    _pf.ADDR(node->name());
+  } else {
+    _pf.LOCAL(symbol->offset());
+  }
 }
 
 void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
