@@ -504,7 +504,93 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_declaration_node(til::declaration_node * const node, int lvl) {
-  // FIXME: EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+
+  int offset = 0, typesize = node->type()->size(); // in bytes
+  if (_in_function_body) {
+    _offset -= typesize;
+    offset = _offset;
+  } else if (_in_function_args) {
+    offset = _offset;
+    _offset += typesize;
+  } else {
+    // global variable
+    offset = 0;
+  }
+
+  auto symbol = new_symbol();
+  symbol->offset(offset);
+  reset_new_symbol();
+
+  if (_in_function_body) {
+    // function arguments and unitialized local variables don't need aditional treatment
+    if (_in_function_args || node->initializer() == nullptr) {
+      return;
+    }
+
+    node->initializer()->accept(this, lvl);
+    if (node->is_typed(cdk::TYPE_INT) || node->is_typed(cdk::TYPE_STRING) || node->is_typed(cdk::TYPE_POINTER)) {
+      _pf.LOCAL(symbol->offset());
+      _pf.STINT();
+    } else if (node->is_typed(cdk::TYPE_DOUBLE)) {
+      if (node->initializer()->is_typed(cdk::TYPE_INT))
+        _pf.I2D();
+      _pf.LOCAL(symbol->offset());
+      _pf.STDOUBLE();
+    } else {
+      std::cerr << node->lineno() << ": should not happen: unknown type" << std::endl;
+      return;
+    }
+  } else {
+    if (symbol->qualifier() == tFORWARD || symbol->qualifier() == tEXTERNAL) {
+      _external_functions_to_declare.insert(symbol->name());
+      return;
+    }
+    
+    _external_functions_to_declare.erase(symbol->name());
+
+    if (node->initializer() == nullptr) {
+      _pf.BSS();
+      _pf.ALIGN();
+
+      if (symbol->qualifier() == tPUBLIC) {
+        _pf.GLOBAL(symbol->name(), _pf.OBJ());
+      }
+
+      _pf.LABEL(symbol->name());
+      _pf.SALLOC(typesize);
+    } else {
+      if (
+        dynamic_cast<cdk::integer_node*>(node->initializer()) == nullptr &&
+        dynamic_cast<cdk::double_node*>(node->initializer()) == nullptr &&
+        dynamic_cast<cdk::string_node*>(node->initializer()) == nullptr &&
+        dynamic_cast<til::null_pointer_node*>(node->initializer()) == nullptr &&
+        dynamic_cast<til::function_node*>(node->initializer()) == nullptr
+      ) {
+        std::cerr << node->lineno() << ": bad initializer for global variable '" +
+          symbol->name() + "'" << std::endl;
+        return;
+      } else {
+        _pf.DATA();
+        _pf.ALIGN();
+
+        if (symbol->qualifier() == tPUBLIC) {
+          _pf.GLOBAL(symbol->name(), _pf.OBJ());
+        }
+
+        _pf.LABEL(symbol->name());
+
+        if (node->is_typed(cdk::TYPE_DOUBLE) && node->initializer()->is_typed(cdk::TYPE_INT)) {
+          // if the initializer is an integer, we need to convert it to double and
+          // allocate space for a double
+          auto int_node = dynamic_cast<cdk::integer_node*>(node->initializer());
+          _pf.SDOUBLE(int_node->value());
+        } else {
+          node->initializer()->accept(this, lvl);
+        }
+      }
+    }
+  }
 }
 
 void til::postfix_writer::do_block_node(til::block_node * const node, int lvl) {
