@@ -20,22 +20,59 @@ void til::postfix_writer::cast_compatible_types(cdk::expression_node * const nod
     auto target_func_type = cdk::functional_type::cast(type);
     auto func_type = cdk::functional_type::cast(node->type());
 
+    bool needs_middleware_func = false;
+
     for (size_t i = 0; i < target_func_type->input_length(); i++) {
       if (target_func_type->input(i)->name() != func_type->input(i)->name()) {
-        // FIXME: cast compatible types
-        std::cerr << node->lineno() << ": compatible types need cast" << std::endl;
-        return;
+        needs_middleware_func = true;
+        break;
       }
     }
 
     // til only supports single return values
     if (target_func_type->output(0)->name() != func_type->output(0)->name()) {
-      // FIXME: cast compatible types
-      std::cerr << node->lineno() << ": compatible types need cast" << std::endl;
-      return;
+      needs_middleware_func = true;
     }  
 
-    node->accept(this, lvl);
+    if (!needs_middleware_func) {
+      // types are equal, no need for middleware function
+      node->accept(this, lvl);
+      return;
+    }
+
+    // create a middleware function that will convert the types
+    int lineno = node->lineno();
+    auto return_type = target_func_type->output(0);
+
+    auto arguments = new cdk::sequence_node(lineno); // arguments of the middleware function
+    auto call_arguments = new cdk::sequence_node(lineno); // arguments with which the original function will be called
+    for (size_t i = 0; i < target_func_type->input_length(); i++) {
+      auto arg_type = target_func_type->input(i);
+      // generate a name so we can refer to the middleware function's arguments
+      // when calling the original function with these same arguments
+      std::string argument_name = "_argument_" + std::to_string(i);
+
+      arguments = new cdk::sequence_node(
+        lineno,
+        new til::declaration_node(lineno, tPRIVATE, arg_type, argument_name, nullptr),
+        arguments
+      );
+      call_arguments = new cdk::sequence_node(
+        lineno,
+        new cdk::rvalue_node(lineno, new cdk::variable_node(lineno, argument_name)),
+        call_arguments
+      );
+    }
+
+    // the middleware function's body will simply call the original function with
+    // the same arguments and return its result
+    auto declarations = new cdk::sequence_node(lineno);
+    auto instructions = new cdk::sequence_node(
+      lineno,
+      new til::return_node(lineno, new til::function_call_node(lineno, node, call_arguments))
+    );
+    auto middleware_function = new til::function_node(lineno, return_type, arguments, declarations, instructions);
+    middleware_function->accept(this, lvl);
   }
 }
 
