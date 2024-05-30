@@ -9,6 +9,36 @@
 
 //---------------------------------------------------------------------------
 
+void til::postfix_writer::cast_compatible_types(cdk::expression_node * const node, int lvl, std::shared_ptr<cdk::basic_type> const type) {
+  if (type->name() != cdk::TYPE_FUNCTIONAL) {
+    node->accept(this, lvl);
+
+    if (node->is_typed(cdk::TYPE_INT) && type->name() == cdk::TYPE_DOUBLE) {
+      _pf.I2D();
+    }
+  } else {
+    auto target_func_type = cdk::functional_type::cast(type);
+    auto func_type = cdk::functional_type::cast(node->type());
+
+    for (size_t i = 0; i < target_func_type->input_length(); i++) {
+      if (target_func_type->input(i)->name() != func_type->input(i)->name()) {
+        // FIXME: cast compatible types
+        std::cerr << node->lineno() << ": compatible types need cast" << std::endl;
+        return;
+      }
+    }
+
+    // til only supports single return values
+    if (target_func_type->output(0)->name() != func_type->output(0)->name()) {
+      // FIXME: cast compatible types
+      std::cerr << node->lineno() << ": compatible types need cast" << std::endl;
+      return;
+    }  
+
+    node->accept(this, lvl);
+  }
+}
+
 void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
   // EMPTY
 }
@@ -287,9 +317,8 @@ void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl)
 void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  node->rvalue()->accept(this, lvl + 2);
+  cast_compatible_types(node->rvalue(), lvl + 2, node->type());
   if (node->type()->name() == cdk::TYPE_DOUBLE) {
-    if (node->rvalue()->type()->name() == cdk::TYPE_INT) _pf.I2D();
     _pf.DUP64();
   } else {
     _pf.DUP32();
@@ -530,18 +559,12 @@ void til::postfix_writer::do_declaration_node(til::declaration_node * const node
       return;
     }
 
-    node->initializer()->accept(this, lvl);
-    if (node->is_typed(cdk::TYPE_INT) || node->is_typed(cdk::TYPE_STRING) || node->is_typed(cdk::TYPE_POINTER)) {
-      _pf.LOCAL(symbol->offset());
-      _pf.STINT();
-    } else if (node->is_typed(cdk::TYPE_DOUBLE)) {
-      if (node->initializer()->is_typed(cdk::TYPE_INT))
-        _pf.I2D();
-      _pf.LOCAL(symbol->offset());
+    cast_compatible_types(node->initializer(), lvl, node->type());
+    _pf.LOCAL(symbol->offset());
+    if (node->type()->name() == cdk::TYPE_DOUBLE) {
       _pf.STDOUBLE();
     } else {
-      std::cerr << node->lineno() << ": should not happen: unknown type" << std::endl;
-      return;
+      _pf.STINT();
     }
   } else {
     if (symbol->qualifier() == tFORWARD || symbol->qualifier() == tEXTERNAL) {
@@ -666,17 +689,12 @@ void til::postfix_writer::do_return_node(til::return_node * const node, int lvl)
   auto return_type = cdk::functional_type::cast(symbol->type())->output(0);
 
   if (return_type->name() != cdk::TYPE_VOID) {
-    node->return_value()->accept(this, lvl + 2);
+    cast_compatible_types(node->return_value(), lvl + 2, return_type);
 
-    if (return_type->name() == cdk::TYPE_INT || return_type->name() == cdk::TYPE_STRING
-        || return_type->name() == cdk::TYPE_POINTER) {
-      _pf.STFVAL32();
-    } else if (return_type->name() == cdk::TYPE_DOUBLE) {
-      if (node->return_value()->type()->name() == cdk::TYPE_INT) _pf.I2D();
+    if (return_type->name() == cdk::TYPE_DOUBLE) {
       _pf.STFVAL64();
     } else {
-      std::cerr << node->lineno() << ": should not happen: unknown return type" << std::endl;
-      return;
+      _pf.STFVAL32();
     }
   }
 
@@ -732,10 +750,7 @@ void til::postfix_writer::do_function_call_node(til::function_call_node * const 
   if (node->arguments()->size() > 0) {
     for (int ax = node->arguments()->size() - 1; ax >= 0; ax--) {
       cdk::expression_node *arg = dynamic_cast<cdk::expression_node*>(node->arguments()->node(ax));
-      arg->accept(this, lvl + 2);
-      if (func_type->input(ax)->name() == cdk::TYPE_DOUBLE && arg->is_typed(cdk::TYPE_INT)) {
-        _pf.I2D();
-      }
+      cast_compatible_types(arg, lvl + 2, func_type->input(ax));
       args_size += func_type->input(ax)->size();
     }
   }

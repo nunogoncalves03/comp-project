@@ -50,6 +50,7 @@ namespace til {
   protected:
     void prepareIDBinaryExpression(cdk::binary_operation_node * const node, int lvl);
     void prepareIDPredicateComparison(cdk::binary_operation_node * const node, int lvl);
+    void cast_compatible_types(cdk::expression_node * const node, int lvl, std::shared_ptr<cdk::basic_type> const type);
 
   private:
     /** Method used to generate sequential labels. */
