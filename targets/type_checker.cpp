@@ -83,15 +83,15 @@ void til::type_checker::do_data_node(cdk::data_node *const node, int lvl) {
 }
 
 void til::type_checker::do_block_node(til::block_node *const node, int lvl) {
-  // FIXME: EMPTY
+  // EMPTY
 }
 
 void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
-  // FIXME: EMPTY
+  // EMPTY
 }
 
 void til::type_checker::do_next_node(til::next_node *const node, int lvl) {
-  // FIXME: EMPTY
+  // EMPTY
 }
 
 //---------------------------------------------------------------------------
@@ -217,7 +217,19 @@ void til::type_checker::process_binary_arithmetic_expression(
       throw std::string("right node type incompatible with double in arithmetic binary expression");
     }
   } else if (acceptOnePointer && node->left()->is_typed(cdk::TYPE_POINTER)) {
+    auto left_ref_type = cdk::reference_type::cast(node->left()->type());
+    if (left_ref_type->referenced()->name() == cdk::TYPE_FUNCTIONAL) {
+      throw std::string("cannot perform arithmetic operations on function pointers");
+    }
+
     node->right()->accept(this, lvl + 2);
+
+    if (node->right()->is_typed(cdk::TYPE_POINTER)) {
+      auto right_ref = cdk::reference_type::cast(node->right()->type());
+      if (right_ref->referenced()->name() == cdk::TYPE_FUNCTIONAL) {
+        throw std::string("cannot perform arithmetic operations on function pointers");
+      }
+    }
 
     if (node->right()->is_typed(cdk::TYPE_INT)) {
       node->type(node->left()->type());
