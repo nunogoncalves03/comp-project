@@ -382,12 +382,12 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
   }
   _function_labels.push(function_label);
 
-  _pf.TEXT(_function_labels.top());
+  _pf.TEXT(function_label);
   _pf.ALIGN();
   if (node->is_program()) {
     _pf.GLOBAL("_main", _pf.FUNC());
   }
-  _pf.LABEL(_function_labels.top());
+  _pf.LABEL(function_label);
 
   auto old_offset = _offset;
   _offset = 8; // function arguments start at +8
@@ -415,9 +415,10 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
   const auto block = new til::block_node(node->lineno(), node->declarations(), node->instructions());
   block->accept(this, lvl);
 
-  // FIXME: should we do this? what about the non-zero returns?
   if (node->is_program()) {
-    // return 0 if main has no return statement
+    // return 0 if program has no return statement.
+    // If there is a return statement, the return_node visitor will place a JMP
+    // to the end of the function and thus skip these instructions
     _pf.INT(0);
     _pf.STFVAL32();
   }
