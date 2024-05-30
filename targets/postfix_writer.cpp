@@ -509,12 +509,12 @@ void til::postfix_writer::do_declaration_node(til::declaration_node * const node
   ASSERT_SAFE_EXPRESSIONS;
 
   int offset = 0, typesize = node->type()->size(); // in bytes
-  if (inFunction()) {
-    _offset -= typesize;
-    offset = _offset;
-  } else if (_in_function_args) {
+  if (_in_function_args) {
     offset = _offset;
     _offset += typesize;
+  } else if (inFunction()) {
+    _offset -= typesize;
+    offset = _offset;
   } else {
     // global variable
     offset = 0;
