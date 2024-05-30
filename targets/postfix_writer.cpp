@@ -462,7 +462,10 @@ void til::postfix_writer::do_function_node(til::function_node * const node, int 
 
   _offset = 0; // local variables start at offset 0
 
-  // FIXME: Not checking for final instructions (not a block_node)
+  // the function_node internally stores declarations and instructions by themselves,
+  // and not within a block_node. Since we need to define a context for the function's body
+  // and check for final instructions (logic that is implemented on the block_node's visitor),
+  // we create a block_node and visit it.
   const auto block = new til::block_node(node->lineno(), node->declarations(), node->instructions());
   block->accept(this, lvl);
 
