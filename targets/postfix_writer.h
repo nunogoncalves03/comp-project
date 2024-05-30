@@ -18,7 +18,7 @@ namespace til {
     cdk::symbol_table<til::symbol> &_symtab;
 
     std::stack<std::string> _function_labels; // the history of function labels visited
-    std::optional<std::string> _external_function_name; // name of external function to call
+    std::optional<std::string> _external_function_name; // name of the external function being called
     std::set<std::string> _external_functions_to_declare; // set of external functions to declare
 
     // the history of loop labels visited during the current function's visit
@@ -48,8 +48,8 @@ namespace til {
     }
   
   protected:
-    void prepareIDBinaryExpression(cdk::binary_operation_node * const node, int lvl);
-    void prepareIDPredicateComparison(cdk::binary_operation_node * const node, int lvl);
+    void processBinaryOperationArguments(cdk::binary_operation_node * const node, int lvl);
+    void processPredicateArguments(cdk::binary_operation_node * const node, int lvl);
     void cast_compatible_types(cdk::expression_node * const node, int lvl, std::shared_ptr<cdk::basic_type> const type);
 
   private:
