@@ -60,6 +60,9 @@ void til::xml_writer::do_allocation_node(til::allocation_node * const node, int 
   do_unary_operation(node, lvl);
 }
 
+void til::xml_writer::do_with_node(til::with_node * const node, int lvl) {
+}
+
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_binary_operation(cdk::binary_operation_node * const node, int lvl) {

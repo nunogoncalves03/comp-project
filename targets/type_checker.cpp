@@ -671,3 +671,38 @@ void til::type_checker::do_function_call_node(til::function_call_node *const nod
 
   node->type(func_type->output(0));
 }
+
+void til::type_checker::do_with_node(til::with_node *const node, int lvl) {
+  node->function()->accept(this, lvl);
+  node->vector()->accept(this, lvl);
+  node->low()->accept(this, lvl);
+  node->high()->accept(this, lvl);
+
+  if (!node->vector()->is_typed(cdk::TYPE_POINTER)) {
+    throw std::string("incompatible type in with_node");
+  }
+
+  if (!node->function()->is_typed(cdk::TYPE_FUNCTIONAL)) {
+    throw std::string("incompatible type in with_node");
+  }
+  auto function_type = cdk::functional_type::cast(node->function()->type());
+  auto vector_type = cdk::reference_type::cast(node->vector()->type());
+  if (function_type->input_length() != 1) {
+    throw std::string("incompatible type in with_node");
+  }
+  if (!types_deep_match(function_type->input(0), vector_type->referenced(), true)) {
+    throw std::string("incompatible type in with_node");
+  }
+
+  if (node->low()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->low()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->low()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("incompatible type in with_node");
+  }
+
+  if (node->high()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->high()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->high()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("incompatible type in with_node");
+  }
+}

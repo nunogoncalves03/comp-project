@@ -117,6 +117,9 @@ void til::frame_size_calculator::do_function_node(til::function_node *const node
 void til::frame_size_calculator::do_sizeof_node(til::sizeof_node *const node, int lvl) {
   // EMPTY
 }
+void til::frame_size_calculator::do_with_node(til::with_node *const node, int lvl) {
+  // EMPTY
+}
 
 void til::frame_size_calculator::do_sequence_node(cdk::sequence_node *const node, int lvl) {
   for (size_t i = 0; i < node->size(); i++) {

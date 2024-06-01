@@ -851,3 +851,30 @@ void til::postfix_writer::do_block_node(til::block_node * const node, int lvl) {
 
   _symtab.pop();
 }
+
+void til::postfix_writer::do_with_node(til::with_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
+  auto lineno = node->lineno();
+
+  std::string i_name = "_with_node_i";
+  auto i = new til::declaration_node(lineno, tPRIVATE, node->low()->type(), i_name, node->low());
+  i->accept(this, lvl);
+  auto i_variable = new cdk::variable_node(lineno, i_name);
+  auto i_rvalue = new cdk::rvalue_node(lineno, i_variable);
+
+  auto condition = new cdk::le_node(lineno, i_rvalue, node->high());
+
+  auto vector_index = new til::pointer_index_node(lineno, node->vector(), i_rvalue);
+  auto vector_rvalue = new cdk::rvalue_node(lineno, vector_index);
+  auto function_call = new til::function_call_node(lineno, node->function(), new cdk::sequence_node(lineno, vector_rvalue));
+
+  auto increment = new cdk::add_node(lineno, i_rvalue, new cdk::integer_node(lineno, 1));
+  auto assign = new cdk::assignment_node(lineno, i_variable, increment);
+  auto incr_eval = new til::evaluation_node(lineno, assign);
+
+  auto loop_block = new cdk::sequence_node(lineno, function_call);
+  loop_block = new cdk::sequence_node(lineno, incr_eval, loop_block);
+  auto loop = new til::loop_node(lineno, condition, loop_block);
+  loop->accept(this, lvl);
+}

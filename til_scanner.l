@@ -77,6 +77,8 @@
 
 "program"              return tPROGRAM; 
 
+"with"                 return tWITH;
+
 [A-Za-z][A-Za-z0-9]*  yylval.s = new std::string(yytext); return tIDENTIFIER;
 
 \"                     yy_push_state(X_STRING); yylval.s = new std::string("");

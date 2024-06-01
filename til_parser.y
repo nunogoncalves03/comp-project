@@ -45,6 +45,7 @@
 %token tBLOCK tIF tLOOP tSTOP tNEXT tRETURN tPRINT tPRINTLN
 %token tREAD tNULL tSET tINDEX tOBJECTS tSIZEOF tFUNCTION
 %token tPROGRAM
+%token tWITH
 
 %type <sequence> global_decls func_args decls instrs exprs
 %type <node> global_decl program func_arg decl instr
@@ -157,6 +158,7 @@ instr : expr                              { $$ = new til::evaluation_node(LINE, 
       | '(' tIF expr instr instr ')'      { $$ = new til::if_else_node(LINE, $3, $4, $5); }
       | '(' tLOOP expr instr ')'          { $$ = new til::loop_node(LINE, $3, $4); }
       | block                             { $$ = $1; }
+      | '(' tWITH expr expr expr expr ')' { $$ = new til::with_node(LINE, $3, $4, $5, $6); }
       ;
 
 exprs : exprs expr           { $$ = new cdk::sequence_node(LINE, $2, $1); }
