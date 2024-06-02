@@ -1,0 +1,12 @@
+(var f (function (void (int i)) (println i)))
+(int! v)
+(program
+  (int j 0)
+  (set v (objects 3)) ; [0, -1, -2]
+  (loop (< j 3) (block
+    (set (index v j) (- j))
+    (set j (+ j 1))
+  ))
+  (with f v (- 1 1) (+ 1 1)) ; 0 ... 2
+  (return 0)
+)

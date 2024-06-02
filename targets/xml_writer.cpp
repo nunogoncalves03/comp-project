@@ -332,3 +332,7 @@ void til::xml_writer::do_function_call_node(til::function_call_node * const node
   closeTag("arguments", lvl + 2);
   closeTag(node, lvl);
 }
+
+void til::xml_writer::do_with_node(til::with_node * const node, int lvl) {
+  // EMPTY
+}

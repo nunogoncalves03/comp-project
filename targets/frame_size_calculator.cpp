@@ -149,3 +149,7 @@ void til::frame_size_calculator::do_declaration_node(til::declaration_node *cons
   ASSERT_SAFE_EXPRESSIONS;
   _localsize += node->type()->size();
 }
+void til::frame_size_calculator::do_with_node(til::with_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  _localsize += 4; // int size
+}

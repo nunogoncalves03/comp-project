@@ -44,7 +44,7 @@
 %token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
 %token tBLOCK tIF tLOOP tSTOP tNEXT tRETURN tPRINT tPRINTLN
 %token tREAD tNULL tSET tINDEX tOBJECTS tSIZEOF tFUNCTION
-%token tPROGRAM
+%token tPROGRAM tWITH
 
 %type <sequence> global_decls func_args decls instrs exprs
 %type <node> global_decl program func_arg decl instr
@@ -156,6 +156,7 @@ instr : expr                              { $$ = new til::evaluation_node(LINE, 
       | '(' tIF expr instr ')'            { $$ = new til::if_node(LINE, $3, $4); }
       | '(' tIF expr instr instr ')'      { $$ = new til::if_else_node(LINE, $3, $4, $5); }
       | '(' tLOOP expr instr ')'          { $$ = new til::loop_node(LINE, $3, $4); }
+      | '(' tWITH expr expr expr expr ')' { $$ = new til::with_node(LINE, $3, $4, $5, $6); }
       | block                             { $$ = $1; }
       ;
 

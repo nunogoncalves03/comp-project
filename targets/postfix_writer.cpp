@@ -851,3 +851,48 @@ void til::postfix_writer::do_block_node(til::block_node * const node, int lvl) {
 
   _symtab.pop();
 }
+
+void til::postfix_writer::do_with_node(til::with_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+
+  _symtab.push();
+
+  // declare i
+  auto index_node_decl = new til::declaration_node(
+    node->lineno(),
+    tPRIVATE,
+    cdk::primitive_type::create(4, cdk::TYPE_INT),
+    "_with_index",
+    node->low()
+  );
+
+  index_node_decl->accept(this, lvl + 2);
+
+  auto index_var_node = new cdk::variable_node(node->lineno(), "_with_index");
+  auto index_rvalue_node = new cdk::rvalue_node(node->lineno(), index_var_node);
+
+  auto while_cond = new cdk::le_node(node->lineno(), index_rvalue_node, node->high());
+  auto function_call = new til::function_call_node(
+    node->lineno(),
+    node->function(),
+    new cdk::sequence_node(
+      node->lineno(),
+      new cdk::rvalue_node(node->lineno(), new til::pointer_index_node(node->lineno(), node->vector(), index_rvalue_node))
+    )
+  );
+  auto incr_node = new cdk::assignment_node(
+    node->lineno(),
+    index_var_node,
+    new cdk::add_node(node->lineno(), index_rvalue_node, new cdk::integer_node(node->lineno(), 1))
+  );
+  auto eval_node = new til::evaluation_node(node->lineno(), incr_node);
+
+  auto while_instrs = new cdk::sequence_node(node->lineno(), function_call);
+  while_instrs = new cdk::sequence_node(node->lineno(), eval_node, while_instrs);
+
+  auto while_node = new til::loop_node(node->lineno(), while_cond, while_instrs);
+
+  while_node->accept(this, lvl + 2);
+
+  _symtab.pop();
+}

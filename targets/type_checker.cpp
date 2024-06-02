@@ -671,3 +671,42 @@ void til::type_checker::do_function_call_node(til::function_call_node *const nod
 
   node->type(func_type->output(0));
 }
+
+void til::type_checker::do_with_node(til::with_node * const node, int lvl) {
+  node->function()->accept(this, lvl);
+
+  if (!node->function()->is_typed(cdk::TYPE_FUNCTIONAL)) {
+    throw std::string("incompatible type in function call");
+  }
+
+  auto func_type = cdk::functional_type::cast(node->function()->type());
+
+  if (func_type->input_length() != 1) {
+    throw std::string("incompatible type in function call");
+  }
+
+  node->vector()->accept(this, lvl);
+
+  if (!node->vector()->is_typed(cdk::TYPE_POINTER)) {
+    throw std::string("vector should be a pointer");
+  }
+
+  auto ref_type = cdk::reference_type::cast(node->vector()->type());
+  if (!types_deep_match(func_type->input(0), ref_type->referenced(), true)) {
+    throw std::string("vector elements type differs from function argument");
+  }
+
+  node->low()->accept(this, lvl);
+  if (node->low()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->low()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->low()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("low should be int");
+  }
+
+  node->high()->accept(this, lvl);
+  if (node->high()->is_typed(cdk::TYPE_UNSPEC)) {
+    node->high()->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
+  } else if (!node->high()->is_typed(cdk::TYPE_INT)) {
+    throw std::string("high should be int");
+  }
+}
